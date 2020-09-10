@@ -6,8 +6,8 @@ output:
 
 # Intall the following packages
 ```{r, eval=FALSE}
-install.packages("readr")
 install.packages("knitr")
+install.packages("rmarkdown")
 install.packages("biostatUZH", repos = "http://R-Forge.R-project.org")
 ```
 
@@ -15,14 +15,16 @@ install.packages("biostatUZH", repos = "http://R-Forge.R-project.org")
 # Libraries & Variables
 ```{r, message=FALSE, warning=FALSE}
 library(knitr)
+library(rmarkdown)
 library(biostatUZH)
-PATH_HOME = path.expand("~")
-PATH = file.path(PATH_HOME, "Data", "workshop1")
+# PATH_HOME = path.expand("~")
+# PATH = file.path(PATH_HOME, "Data", "workshop1")
 ```
 
 # Load data
 ```{r, message=FALSE}
-data = read.csv(file = file.path(PATH, "data.csv"), header = TRUE, stringsAsFactors = TRUE)
+# data = read.csv(file = file.path(PATH, "data.csv"), header = TRUE, stringsAsFactors = TRUE)
+data = read.csv(file = "data.csv", header = TRUE, stringsAsFactors = TRUE)
 ```
 
 # 1a) Descriptives of the studies
