@@ -9,6 +9,7 @@ output:
 install.packages("knitr")
 install.packages("rmarkdown")
 install.packages("biostatUZH", repos = "http://R-Forge.R-project.org")
+install.packages("Hmisc")
 ```
 
 
@@ -18,6 +19,7 @@ library(knitr)
 library(rmarkdown)
 library(biostatUZH)
 library(Hmisc)
+library(ggplot2)
 # PATH_HOME = path.expand("~")
 # PATH = file.path(PATH_HOME, "Data", "workshop1")
 ```
@@ -80,7 +82,7 @@ stat = prop.test(numberSign, total, correct = FALSE)
 paste("p", formatPval(stat$p.value))
 ```
 
-```{r}
+```{r fig.height=3.5, fig.width=4}
 # simple plot: 
 # barplot(tab.effect$prop)
 # order levels
