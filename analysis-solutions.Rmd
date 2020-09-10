@@ -1,0 +1,111 @@
+---
+title: "Computational notebooks in R"
+output:
+  pdf_document: default
+---
+
+# Intall the following packages
+```{r, eval=FALSE}
+install.packages("knitr")
+install.packages("rmarkdown")
+install.packages("biostatUZH", repos = "http://R-Forge.R-project.org")
+```
+
+
+# Libraries & Variables
+```{r, message=FALSE, warning=FALSE}
+library(knitr)
+library(rmarkdown)
+library(biostatUZH)
+library(Hmisc)
+# PATH_HOME = path.expand("~")
+# PATH = file.path(PATH_HOME, "Data", "workshop1")
+```
+
+# Load data
+```{r, message=FALSE}
+# data = read.csv(file = file.path(PATH, "data.csv"), header = TRUE, stringsAsFactors = TRUE)
+data = read.csv(file = "data.csv", header = TRUE, stringsAsFactors = TRUE)
+```
+
+# Analysis 1a: Descriptives of the studies
+Table with the number of studies, the median effect size, median sample size, range of publication years, and median number of citations per year per medicall specialty.
+```{r}
+# number of studies per medical specialty
+nrOfStudies = summary(data$specialty)
+# median effect size per medical specialty
+effect = tapply(data$effect.r, data$specialty, function (x) median(abs(x)))
+effect_IRQ_lower = tapply(data$effect.r, data$specialty, function (x) quantile(abs(x), 0.25))
+effect_IRQ_upper = tapply(data$effect.r, data$specialty, function (x) quantile(abs(x), 0.75))
+# median sample size per medical specialty
+sampleSize = tapply(data$effect.N, data$specialty, function (x) median(x))
+# range of publication years
+publicationYears = tapply(data$year, data$specialty, 
+                          function (x) sprintf("%d-%d",
+                                               range(x, na.rm = TRUE)[1],
+                                               range(x, na.rm = TRUE)[2]))
+citations = tapply(data$cited.peryear, data$specialty, function (x) median(x, na.rm = TRUE))
+
+# create a data frame
+tab.descriptives = data.frame(nrOfStudies, 
+                              effect = sprintf("%.2f (%.2f-%.2f)", effect, effect_IRQ_lower, effect_IRQ_upper), 
+                              sprintf("%.0f", sampleSize), publicationYears, 
+                              citations = sprintf("%.1f", citations)
+                              )
+
+tab = tab.descriptives[order(tab.descriptives$nrOfStudies, decreasing = TRUE),]
+colnames(tab) = c("studies", "effect (IRQ)", "N", "publication years", "citations")
+kable(tab)
+```
+
+# Analysis 1b: Proportion of significant effects per specialty
+```{r}
+numberSign = tapply(data$effect.p, data$specialty, function (x) sum(x < 0.05))
+total = tapply(data$effect.p, data$specialty, length)
+
+myCI =  binconf(x=numberSign, n=total, method = "wilson")
+
+tab.effect = data.frame(
+  specialty = names(numberSign),
+  prop = numberSign/total,
+  lower = myCI[,2],
+  upper = myCI[,3],
+  proportion = sprintf("%.2f (%.2f-%.2f)",numberSign/total, myCI[,2], myCI[,3]))
+rownames(tab.effect) = NULL
+kable(tab.effect[order(tab.effect$prop, decreasing = TRUE),c("specialty","proportion")], row.names = FALSE)
+```
+
+```{r}
+stat = prop.test(numberSign, total, correct = FALSE)
+paste("p", formatPval(stat$p.value))
+```
+
+```{r}
+# simple plot: 
+# barplot(tab.effect$prop)
+# order levels
+idx = order(tab.effect$prop, decreasing = TRUE)
+tab.effect$specialty = factor(tab.effect$specialty, levels = tab.effect$specialty[idx])
+
+ggplot(tab.effect, aes(x=specialty, y=prop)) +
+  geom_bar(stat="identity", fill="#1b9e77") + 
+  geom_errorbar(aes(ymin=lower, ymax=upper), width=.5, color="#e7298a") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
+  ylab("proportion of sign. effects") +
+  xlab("medical specialty")
+```
+
+
+# Analysis 1c: Logistic model of statistical significance of a study
+```{r}
+data$specialty = relevel(data$specialty, ref = "Gastroenterology")
+
+fit = glm((effect.p < 0.05) ~ specialty + SJR.Best.Quartile + log2(effect.N) + 
+              log2(cited.peryear) + year, data = data, family = "binomial")
+
+tab = tableOR(fit, latex = FALSE, short = TRUE, 
+              refLevels = c("Gastroenterology", "Q1"), Wald = TRUE)
+kable(tab)
+```
+
