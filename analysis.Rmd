@@ -27,7 +27,7 @@ library(biostatUZH)
 data = read.csv(file = "data.csv", header = TRUE, stringsAsFactors = TRUE)
 ```
 
-# 1a) Descriptives of the studies
+# Analysis 1a: Descriptives of the studies
 Table with the number of studies, the median effect size, median sample size, range of publication years, and median number of citations per year per medicall specialty.
 ```{r}
 # number of studies per medical specialty
@@ -54,7 +54,7 @@ tab.descriptives = data.frame(nrOfStudies,
 kable(tab.descriptives[order(tab.descriptives$nrOfStudies, decreasing = TRUE),])
 ```
 
-# 1b) Proportion of significant effects per specialty
+# Analysis 1b: Proportion of significant effects per specialty
 ```{r}
 numberSign = tapply(data$effect.p, data$specialty, function (x) sum(x < 0.05))
 total = tapply(data$effect.p, data$specialty, length)
@@ -72,8 +72,12 @@ stat = prop.test(numberSign, total, correct = FALSE)
 paste("p", formatPval(stat$p.value))
 ```
 
+```{r}
+# simple plot: 
+barplot(tab.effect$prop)
+```
 
-# 1c) Logistic model of statistical significance of a study
+# Analysis 1c Logistic model of statistical significance of a study
 ```{r}
 data$specialty = relevel(data$specialty, ref = "Gastroenterology")
 
