@@ -1,0 +1,85 @@
+---
+title: "Computational notebooks in R"
+output:
+  pdf_document: default
+---
+
+# Intall the following packages
+```{r, eval=FALSE}
+install.packages("readr")
+install.packages("knitr")
+install.packages("biostatUZH", repos = "http://R-Forge.R-project.org")
+```
+
+
+# Libraries & Variables
+```{r, message=FALSE, warning=FALSE}
+library(knitr)
+library(biostatUZH)
+PATH_HOME = path.expand("~")
+PATH = file.path(PATH_HOME, "Data", "workshop1")
+```
+
+# Load data
+```{r, message=FALSE}
+data = read.csv(file = file.path(PATH, "data.csv"), header = TRUE, stringsAsFactors = TRUE)
+```
+
+# 1a) Descriptives of the studies
+Table with the number of studies, the median effect size, median sample size, range of publication years, and median number of citations per year per medicall specialty.
+```{r}
+# number of studies per medical specialty
+nrOfStudies = summary(data$specialty)
+# median effect size per medical specialty
+effect = tapply(data$effect.r, data$specialty, function (x) median(abs(x)))
+# median sample size per medical specialty
+sampleSize = tapply(data$effect.N, data$specialty, function (x) median(x))
+# range of publication years
+publicationYears = tapply(data$year, data$specialty, 
+                          function (x) sprintf("%d-%d",
+                                               range(x, na.rm = TRUE)[1],
+                                               range(x, na.rm = TRUE)[2]))
+citations = tapply(data$cited.peryear, data$specialty, function (x) median(x, na.rm = TRUE))
+
+# create a data frame
+tab.descriptives = data.frame(nrOfStudies, 
+                              effect = sprintf("%.2f", effect), 
+                              sprintf("%.0f", sampleSize), publicationYears, 
+                              citations = sprintf("%.1f", citations)
+                              )
+
+
+kable(tab.descriptives[order(tab.descriptives$nrOfStudies, decreasing = TRUE),])
+```
+
+# 1b) Proportion of significant effects per specialty
+```{r}
+numberSign = tapply(data$effect.p, data$specialty, function (x) sum(x < 0.05))
+total = tapply(data$effect.p, data$specialty, length)
+
+tab.effect = data.frame(
+  specialty = names(numberSign),
+  prop = numberSign/total,
+  proportion = sprintf("%.2f",numberSign/total))
+rownames(tab.effect) = NULL
+kable(tab.effect[,c(1,3)], row.names = FALSE)
+```
+
+```{r}
+stat = prop.test(numberSign, total, correct = FALSE)
+paste("p", formatPval(stat$p.value))
+```
+
+
+# 1c) Logistic model of statistical significance of a study
+```{r}
+data$specialty = relevel(data$specialty, ref = "Gastroenterology")
+
+fit = glm((effect.p < 0.05) ~ specialty + SJR.Best.Quartile + log2(effect.N) + 
+              log2(cited.peryear) + year, data = data, family = "binomial")
+
+tab = tableOR(fit, latex = FALSE, short = TRUE, 
+              refLevels = c("Gastroenterology", "Q1"), Wald = TRUE)
+kable(tab)
+```
+
